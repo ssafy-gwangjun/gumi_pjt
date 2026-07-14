@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalHub Gumi - 구미 관광 가이드</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Leaflet.js Map CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+        }
+        /* Leaflet Map Custom Height & Styling */
+        #map {
+            height: 480px;
+            z-index: 10;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Vue App Container -->
+    <div id="app" class="flex flex-col min-h-screen relative" v-cloak>
+        
+        <!-- Header & Navigation -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <!-- Logo / Brand -->
+                    <div class="flex items-center space-x-3 cursor-pointer" @click="currentTab = 'map'">
+                        <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-200">
+                            <i class="fa-solid fa-map-location-dot text-lg"></i>
+                        </div>
+                        <div>
+                            <span class="text-xl font-bold tracking-tight text-slate-900">LocalHub <span class="text-emerald-600">Gumi</span></span>
+                            <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">SSAFY Gumi Project MVP</p>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Tabs -->
+                    <nav class="flex space-x-1 sm:space-x-4">
+                        <button 
+                            @click="switchTab('map')"
+                            :class="currentTab === 'map' ? 'bg-emerald-50 text-emerald-700 border-emerald-500' : 'text-slate-600 hover:text-slate-900 border-transparent hover:bg-slate-50'"
+                            class="px-3 py-2 rounded-lg text-sm font-medium border-b-2 transition-all flex items-center space-x-2"
+                        >
+                            <i class="fa-solid fa-map"></i>
+                            <span class="hidden sm:inline">관광 지도 안내</span>
+                        </button>
+                        <button 
+                            @click="switchTab('community')"
+                            :class="currentTab === 'community' ? 'bg-emerald-50 text-emerald-700 border-emerald-500' : 'text-slate-600 hover:text-slate-900 border-transparent hover:bg-slate-50'"
+                            class="px-3 py-2 rounded-lg text-sm font-medium border-b-2 transition-all flex items-center space-x-2"
+                        >
+                            <i class="fa-solid fa-users"></i>
+                            <span class="hidden sm:inline">익명 커뮤니티</span>
+                        </button>
+                        <button 
+                            @click="switchTab('bookmarks')"
+                            :class="currentTab === 'bookmarks' ? 'bg-emerald-50 text-emerald-700 border-emerald-500' : 'text-slate-600 hover:text-slate-900 border-transparent hover:bg-slate-50'"
+                            class="px-3 py-2 rounded-lg text-sm font-medium border-b-2 transition-all flex items-center space-x-2"
+                        >
+                            <i class="fa-solid fa-bookmark"></i>
+                            <span class="hidden sm:inline">내 저장 목록</span>
+                        </button>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            
+            <!-- TAB 1: Map Guide -->
+            <div v-show="currentTab === 'map'" class="space-y-6">
+                <!-- Page Hero / Intro -->
+                <div class="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-6 sm:p-8 rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500 text-white mb-2">
+                            Gumi, Gyeongbuk
+                        </div>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">구미시 로컬 관광 허브</h1>
+                        <p class="text-emerald-100 mt-2 max-w-xl text-sm sm:text-base">
+                            금오산의 수려한 자연환경과 첨단 산업도시의 매력이 공존하는 구미의 주요 관광 명소, 숙박, 맛집 정보를 한눈에 지도로 확인해 보세요.
+                        </p>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/15 self-start md:self-auto">
+                        <i class="fa-solid fa-cloud-sun text-2xl text-yellow-300"></i>
+                        <div class="text-xs">
+                            <p class="font-bold">오늘의 추천 코스</p>
+                            <p class="text-white/80">금오산 저수지 벚꽃길 산책</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- JSON Data Loading Alert Banner -->
+                <div v-if="dataLoadStatus !== 'success'" class="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="flex items-start space-x-3">
+                        <i class="fa-solid fa-triangle-exclamation text-xl text-amber-600 mt-0.5"></i>
+                        <div>
+                            <h4 class="font-bold text-sm">로컬 데이터 파일 연동 필요 안내</h4>
+                            <p class="text-xs text-amber-700 mt-1">
+                                브라우저 보안 규정(CORS)으로 인해 로컬 파일 실행(`file://`) 시 `data/` 내부 JSON을 직접 읽을 수 없거나 파일이 존재하지 않을 수 있습니다.
+                            </p>
+                            <p class="text-[11px] text-amber-600 mt-1 font-semibold">
+                                * 해결책: VS Code의 Live Server를 가동하시거나, 아래 버튼으로 동일 경로의 `data/` 내부 JSON 파일을 통째로 끌어다 다중 선택해 주세요.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <label class="cursor-pointer bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md transition-all inline-block text-center">
+                            <i class="fa-solid fa-file-import mr-1.5"></i>JSON 파일 직접 다중 업로드
+                            <input 
+                                type="file" 
+                                multiple 
+                                accept=".json" 
+                                class="hidden" 
+                                @change="handleManualJsonUpload"
+                            />
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Success State Loaded Info Banner -->
+                <div v-else class="bg-emerald-50 border border-emerald-200 text-emerald-900 p-3 px-4 rounded-xl flex justify-between items-center text-xs">
+                    <span class="font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                        로컬 `data/` 디렉토리 내의 원본 JSON 데이터 연동 완료! (총 {{ gumiItems.length }}개 장소 활성화)
+                    </span>
+                    <label class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded font-bold cursor-pointer">
+                        데이터 재로드
+                        <input type="file" multiple accept=".json" class="hidden" @change="handleManualJsonUpload" />
+                    </label>
+                </div>
+
+                <!-- Map Grid Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Map and Categories (Left & Center) -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <!-- Category Filters -->
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">콘텐츠 유형별 필터</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <button 
+                                    v-for="cat in categories" 
+                                    :key="cat.id"
+                                    @click="toggleCategory(cat.id)"
+                                    :class="selectedCategory === cat.id ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1"
+                                >
+                                    <i :class="cat.icon"></i>
+                                    <span>{{ cat.name }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Map Container -->
+                        <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm relative">
+                            <div id="map" class="rounded-xl overflow-hidden shadow-inner"></div>
+                            <!-- Map Reset / Center Button -->
+                            <button 
+                                @click="resetMapCenter"
+                                class="absolute bottom-4 right-4 z-[40] bg-white hover:bg-slate-50 text-slate-700 p-2.5 rounded-lg shadow-md border border-slate-200 flex items-center space-x-1 text-xs font-semibold"
+                            >
+                                <i class="fa-solid fa-location-crosshairs"></i>
+                                <span>구미 중심 재정렬</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- POI List (Right) -->
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                            <h2 class="font-bold text-slate-900 flex items-center space-x-2">
+                                <i class="fa-solid fa-list text-emerald-600"></i>
+                                <span>구미 추천 장소 ({{ filteredItems.length }}곳)</span>
+                            </h2>
+                            <span class="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-bold">인기순</span>
+                        </div>
+
+                        <!-- Search Box inside List -->
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                v-model="searchQuery" 
+                                placeholder="장소명, 주소 검색..."
+                                class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm shadow-sm transition-all"
+                            />
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                        </div>
+
+                        <!-- POI Cards Container (Scrollable) -->
+                        <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                            <div 
+                                v-for="item in filteredItems" 
+                                :key="item.contentid"
+                                :class="selectedItem && selectedItem.contentid === item.contentid ? 'ring-2 ring-emerald-500 bg-emerald-50/20' : 'bg-white hover:bg-slate-50'"
+                                class="border border-slate-200 rounded-xl p-3 shadow-sm transition-all cursor-pointer flex gap-3 relative"
+                                @click="selectPOI(item)"
+                            >
+                                <!-- Image Thumbnail -->
+                                <div class="w-20 h-20 bg-slate-100 rounded-lg overflow-hidden shrink-0 relative flex items-center justify-center">
+                                    <img 
+                                        :src="item.firstimage || 'https://placehold.co/600x400/eceff1/90a4ae?text=No+Image'" 
+                                        class="object-cover w-full h-full"
+                                        @error="handleImageError"
+                                    />
+                                    <div class="absolute top-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">
+                                        {{ getCategoryName(item.contenttypeid) }}
+                                    </div>
+                                </div>
+
+                                <!-- Text Details -->
+                                <div class="flex-grow min-w-0 flex flex-col justify-between">
+                                    <div>
+                                        <h4 class="font-bold text-sm text-slate-900 truncate">{{ item.title }}</h4>
+                                        <p class="text-xs text-slate-500 truncate mt-1">
+                                            <i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>{{ item.addr1 }}
+                                        </p>
+                                        <p v-if="item.tel" class="text-[11px] text-slate-400 mt-0.5">
+                                            <i class="fa-solid fa-phone text-slate-300 mr-1"></i>{{ item.tel }}
+                                        </p>
+                                    </div>
+
+                                    <!-- Actions Row (Like & Bookmark) -->
+                                    <div class="flex items-center space-x-3 mt-2 pt-2 border-t border-slate-100">
+                                        <button 
+                                            @click.stop="toggleLike(item.contentid)"
+                                            class="text-xs flex items-center space-x-1"
+                                            :class="isLiked(item.contentid) ? 'text-rose-500 font-semibold' : 'text-slate-400 hover:text-slate-600'"
+                                        >
+                                            <i :class="isLiked(item.contentid) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
+                                            <span>좋아요 {{ getLikesCount(item.contentid) }}</span>
+                                        </button>
+                                        <button 
+                                            @click.stop="toggleBookmark(item.contentid)"
+                                            class="text-xs flex items-center space-x-1"
+                                            :class="isBookmarked(item.contentid) ? 'text-amber-500 font-semibold' : 'text-slate-400 hover:text-slate-600'"
+                                        >
+                                            <i :class="isBookmarked(item.contentid) ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark'"></i>
+                                            <span>북마크</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="filteredItems.length === 0" class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-200">
+                                <i class="fa-solid fa-folder-open text-3xl text-slate-300 mb-2"></i>
+                                <p class="text-sm text-slate-500">조건에 부합하는 장소가 없습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Anonymous Community -->
+            <div v-show="currentTab === 'community'" class="space-y-6">
+                <!-- Community Intro banner -->
+                <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-md flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-extrabold tracking-tight">익명 자유게시판</h1>
+                        <p class="text-slate-400 text-sm mt-1">회원가입 없이 즉시 글을 쓰고 소통해 보세요. 작성자 비밀번호로 삭제/수정이 가능합니다.</p>
+                    </div>
+                    <button 
+                        @click="openWriteModal"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm flex items-center space-x-2 shadow-lg shadow-emerald-950 transition-all shrink-0"
+                    >
+                        <i class="fa-solid fa-pen-nib"></i>
+                        <span>새 게시글 작성</span>
+                    </button>
+                </div>
+
+                <!-- Board Content -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-semibold bg-emerald-50 text-emerald-700 px-2 py-1 rounded">구미 실시간</span>
+                            <span class="text-sm text-slate-500">전체 {{ posts.length }}개의 의견</span>
+                        </div>
+                        <div class="w-full sm:w-64 relative">
+                            <input 
+                                type="text" 
+                                v-model="boardSearchQuery" 
+                                placeholder="게시글 검색..." 
+                                class="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs transition-all"
+                            />
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        </div>
+                    </div>
+
+                    <!-- Post List table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-100">
+                                    <th class="py-3.5 px-6 w-16 text-center">번호</th>
+                                    <th class="py-3.5 px-4">제목</th>
+                                    <th class="py-3.5 px-4 w-32">작성자</th>
+                                    <th class="py-3.5 px-4 w-32 text-center">등록일시</th>
+                                    <th class="py-3.5 px-4 w-24 text-center">조회수</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-sm">
+                                <tr 
+                                    v-for="(post, idx) in filteredPosts" 
+                                    :key="post.id"
+                                    class="hover:bg-slate-50/50 cursor-pointer transition-all"
+                                    @click="viewPost(post)"
+                                >
+                                    <td class="py-4 px-6 text-center text-slate-400 font-medium">{{ filteredPosts.length - idx }}</td>
+                                    <td class="py-4 px-4 font-semibold text-slate-800">
+                                        <div class="flex items-center space-x-2">
+                                            <span v-if="post.category" class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px]">{{ post.category }}</span>
+                                            <span class="truncate max-w-[200px] sm:max-w-md hover:text-emerald-600 transition-colors">{{ post.title }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4 text-slate-500 flex items-center space-x-1.5 mt-1">
+                                        <div class="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center text-[10px] text-emerald-800 font-bold">
+                                            {{ post.author.charAt(0) }}
+                                        </div>
+                                        <span class="truncate max-w-[80px]">{{ post.author }}</span>
+                                    </td>
+                                    <td class="py-4 px-4 text-slate-400 text-center text-xs">{{ formatDate(post.createdDate) }}</td>
+                                    <td class="py-4 px-4 text-slate-400 text-center font-medium">{{ post.views }}</td>
+                                </tr>
+
+                                <tr v-if="filteredPosts.length === 0">
+                                    <td colspan="5" class="py-16 text-center text-slate-400">
+                                        <i class="fa-solid fa-comments text-4xl text-slate-200 mb-3 block"></i>
+                                        첫 번째 게시글을 작성해 보세요!
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: Bookmarks & Saved -->
+            <div v-show="currentTab === 'bookmarks'" class="space-y-6">
+                <!-- Info Section -->
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">내 보관함</h1>
+                    <p class="text-slate-500 text-sm mt-1">로그인 없이 브라우저 캐시(localStorage)를 통해 소중하게 간직 중인 북마크 리스트입니다.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Bookmarked Places -->
+                    <div class="space-y-4">
+                        <h2 class="font-bold text-slate-800 flex items-center space-x-2 border-b border-slate-200 pb-2">
+                            <i class="fa-solid fa-map-pin text-amber-500"></i>
+                            <span>저장된 구미 여행지 ({{ bookmarkedPlaces.length }}곳)</span>
+                        </h2>
+                        
+                        <div class="space-y-3">
+                            <div 
+                                v-for="item in bookmarkedPlaces" 
+                                :key="item.contentid"
+                                class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow transition-all flex gap-3 cursor-pointer"
+                                @click="selectPOIAndSwitch(item)"
+                            >
+                                <img 
+                                    :src="item.firstimage || 'https://placehold.co/600x400/eceff1/90a4ae?text=No+Image'" 
+                                    class="w-16 h-16 object-cover rounded-lg bg-slate-100 shrink-0"
+                                />
+                                <div class="flex-grow min-w-0">
+                                    <h4 class="font-bold text-sm text-slate-950 truncate">{{ item.title }}</h4>
+                                    <p class="text-xs text-slate-500 truncate mt-1">{{ item.addr1 }}</p>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">북마크 완료</span>
+                                        <button 
+                                            @click.stop="toggleBookmark(item.contentid)" 
+                                            class="text-xs text-rose-500 hover:underline font-semibold ml-auto"
+                                        >
+                                            삭제
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="bookmarkedPlaces.length === 0" class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-200">
+                                <i class="fa-regular fa-bookmark text-2xl text-slate-300 mb-2 block"></i>
+                                <p class="text-xs text-slate-400">아직 저장한 장소가 없습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Liked Places -->
+                    <div class="space-y-4">
+                        <h2 class="font-bold text-slate-800 flex items-center space-x-2 border-b border-slate-200 pb-2">
+                            <i class="fa-solid fa-heart text-rose-500"></i>
+                            <span>좋아요 표시한 장소 ({{ likedPlaces.length }}곳)</span>
+                        </h2>
+
+                        <div class="space-y-3">
+                            <div 
+                                v-for="item in likedPlaces" 
+                                :key="item.contentid"
+                                class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow transition-all flex gap-3 cursor-pointer"
+                                @click="selectPOIAndSwitch(item)"
+                            >
+                                <img 
+                                    :src="item.firstimage || 'https://placehold.co/600x400/eceff1/90a4ae?text=No+Image'" 
+                                    class="w-16 h-16 object-cover rounded-lg bg-slate-100 shrink-0"
+                                />
+                                <div class="flex-grow min-w-0">
+                                    <h4 class="font-bold text-sm text-slate-950 truncate">{{ item.title }}</h4>
+                                    <p class="text-xs text-slate-500 truncate mt-1">{{ item.addr1 }}</p>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <span class="text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold">좋아요 반영됨</span>
+                                        <button 
+                                            @click.stop="toggleLike(item.contentid)" 
+                                            class="text-xs text-rose-500 hover:underline font-semibold ml-auto"
+                                        >
+                                            취소
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="likedPlaces.length === 0" class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-200">
+                                <i class="fa-regular fa-heart text-2xl text-slate-300 mb-2 block"></i>
+                                <p class="text-xs text-slate-400">좋아요 표시한 장소가 없습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- FLOATING AI CHATBOT SYSTEM -->
+        <div class="fixed bottom-6 right-6 z-[999]">
+            <button 
+                @click="toggleChat"
+                class="w-14 h-14 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all relative border-2 border-white"
+            >
+                <!-- Pulse Glow Effect -->
+                <span class="absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-20 animate-ping" v-if="!isChatOpen"></span>
+                <i v-if="!isChatOpen" class="fa-solid fa-comment-dots text-2xl"></i>
+                <i v-else class="fa-solid fa-xmark text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Chat Window Panel -->
+        <div 
+            v-show="isChatOpen" 
+            class="fixed bottom-24 right-4 left-4 sm:left-auto sm:right-6 sm:w-96 h-[550px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[998] flex flex-col overflow-hidden transition-all duration-300"
+        >
+            <!-- Chat Header -->
+            <div class="bg-gradient-to-r from-emerald-700 to-teal-800 text-white p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center text-white font-bold">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm">구미 로컬 가이드 AI</h4>
+                        <div class="flex items-center space-x-1">
+                            <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                            <span class="text-[10px] text-emerald-100">실시간 구미 정보 분석가</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- API Settings Button -->
+                <button 
+                    @click="showApiSettings = !showApiSettings" 
+                    title="Gemini API Key 설정"
+                    class="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-all"
+                >
+                    <i class="fa-solid fa-gear text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Settings Tray (Gemini Key Setup) -->
+            <div v-show="showApiSettings" class="bg-slate-50 border-b border-slate-200 p-3.5 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-700">Gemini 3.1 API Key 설정</span>
+                    <a href="https://aistudio.google.com/" target="_blank" class="text-[10px] text-emerald-600 hover:underline">무료 키 발급하기 &rarr;</a>
+                </div>
+                <div class="flex gap-2">
+                    <input 
+                        type="password" 
+                        v-model="geminiApiKey" 
+                        placeholder="AIzaSy..." 
+                        class="flex-grow px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <button 
+                        @click="saveApiKey"
+                        class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors"
+                    >
+                        저장
+                    </button>
+                </div>
+                <p class="text-[10px] text-slate-400 leading-relaxed">
+                    * API Key가 없을 경우, 기본 저장된 구미 주요 데이터 가이드를 통해 시뮬레이션 작동합니다. 키를 입력하면 실제 생성형 AI와 연동됩니다.
+                </p>
+            </div>
+
+            <!-- Chat Messages Container -->
+            <div class="flex-grow overflow-y-auto p-4 space-y-4" ref="chatScrollContainer">
+                <div 
+                    v-for="(msg, index) in chatMessages" 
+                    :key="index"
+                    :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
+                    class="flex gap-2.5"
+                >
+                    <!-- System Avatar -->
+                    <div 
+                        v-if="msg.role !== 'user'" 
+                        class="w-7 h-7 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold"
+                    >
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+
+                    <!-- Message Bubble -->
+                    <div 
+                        :class="msg.role === 'user' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-800'"
+                        class="max-w-[75%] p-3 rounded-2xl text-xs leading-relaxed shadow-sm whitespace-pre-wrap"
+                    >
+                        {{ msg.text }}
+                    </div>
+                </div>
+
+                <!-- Thinking indicator -->
+                <div v-if="isAiTyping" class="flex gap-2.5 items-center">
+                    <div class="w-7 h-7 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="bg-slate-100 p-3 rounded-2xl text-xs text-slate-500 flex items-center space-x-1.5 shadow-sm">
+                        <span>구미 가이드가 답변을 생각하는 중입니다</span>
+                        <span class="flex space-x-0.5">
+                            <span class="w-1 h-1 bg-slate-400 rounded-full animate-bounce"></span>
+                            <span class="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                            <span class="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Template Chips -->
+            <div class="px-4 py-2 bg-slate-50 border-t border-slate-100 flex gap-1.5 overflow-x-auto whitespace-nowrap">
+                <button 
+                    v-for="preset in chatPresets" 
+                    :key="preset"
+                    @click="sendPreset(preset)"
+                    class="bg-white border border-slate-200 hover:border-emerald-500 text-slate-600 text-[10px] font-medium px-2.5 py-1 rounded-full transition-all shrink-0 shadow-sm"
+                >
+                    {{ preset }}
+                </button>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+                <input 
+                    type="text" 
+                    v-model="chatInput" 
+                    @keyup.enter="sendChatMessage"
+                    placeholder="구미 관광지에 대해 물어보세요..." 
+                    class="flex-grow px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                />
+                <button 
+                    @click="sendChatMessage"
+                    class="w-8.5 h-8.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-sm"
+                >
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- MODAL 1: Create/Edit Post Modal -->
+        <div v-if="isWriteModalOpen" class="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 class="font-bold text-slate-900 text-base">
+                        <i class="fa-solid fa-pen-nib text-emerald-600 mr-1.5"></i>
+                        <span>{{ editingPost ? '게시글 수정하기' : '새 게시글 작성' }}</span>
+                    </h3>
+                    <button @click="closeWriteModal" class="text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="p-5 space-y-4 overflow-y-auto">
+                    <!-- Title -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">제목 <span class="text-rose-500">*</span></label>
+                        <input 
+                            type="text" 
+                            v-model="postForm.title" 
+                            placeholder="제목을 입력하세요"
+                            class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                        />
+                    </div>
+
+                    <!-- Category / Author Grid -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">카테고리</label>
+                            <select 
+                                v-model="postForm.category"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                            >
+                                <option value="잡담">잡담</option>
+                                <option value="맛집">맛집</option>
+                                <option value="질문">질문</option>
+                                <option value="축제/공연">축제/공연</option>
+                                <option value="후기">후기</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">닉네임 <span class="text-rose-500">*</span></label>
+                            <input 
+                                type="text" 
+                                v-model="postForm.author" 
+                                :disabled="editingPost !== null"
+                                placeholder="익명글쓴이"
+                                class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all disabled:opacity-60"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Password (Critical for Anonymous MVP update/delete validation) -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">작성 비밀번호 <span class="text-rose-500">*</span></label>
+                        <input 
+                            type="password" 
+                            v-model="postForm.password" 
+                            placeholder="게시글 수정/삭제 시 필요합니다"
+                            class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                        />
+                    </div>
+
+                    <!-- Content Body -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">본문 <span class="text-rose-500">*</span></label>
+                        <textarea 
+                            v-model="postForm.content" 
+                            rows="6"
+                            placeholder="구미 로컬 정보, 꿀팁, 맛집 이야기를 남겨주세요."
+                            class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all resize-none"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- Footer button action -->
+                <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end space-x-2">
+                    <button 
+                        @click="closeWriteModal"
+                        class="bg-white hover:bg-slate-100 text-slate-600 font-bold py-2 px-4 rounded-xl text-xs border border-slate-200 transition-colors"
+                    >
+                        취소
+                    </button>
+                    <button 
+                        @click="submitPost"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl text-xs shadow transition-colors"
+                    >
+                        {{ editingPost ? '수정하기' : '등록하기' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 2: Post Detail View Modal -->
+        <div v-if="isViewModalOpen" class="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">
+                            {{ activePost?.category }}
+                        </span>
+                        <span class="text-xs text-slate-400">조회수 {{ activePost?.views }}</span>
+                    </div>
+                    <button @click="isViewModalOpen = false" class="text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Post detail body -->
+                <div class="p-6 space-y-4 overflow-y-auto flex-grow">
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-bold text-slate-950">{{ activePost?.title }}</h2>
+                        <div class="flex items-center space-x-2 mt-2 text-xs text-slate-400">
+                            <span class="font-semibold text-slate-700">{{ activePost?.author }}</span>
+                            <span>•</span>
+                            <span>{{ formatDate(activePost?.createdDate) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50/50 rounded-xl p-4 border border-slate-100 text-slate-800 text-sm whitespace-pre-wrap leading-relaxed min-h-[120px]">
+                        {{ activePost?.content }}
+                    </div>
+                </div>
+
+                <!-- Actions / Auth prompt triggers -->
+                <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <input 
+                            type="password" 
+                            v-model="actionPassword" 
+                            placeholder="비밀번호 입력"
+                            class="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 w-28"
+                        />
+                        <button 
+                            @click="editPostWithPassword" 
+                            class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                            수정
+                        </button>
+                        <button 
+                            @click="deletePostWithPassword" 
+                            class="bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                            삭제
+                        </button>
+                    </div>
+
+                    <button 
+                        @click="isViewModalOpen = false"
+                        class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-1.5 px-4 rounded-lg text-xs transition-colors"
+                    >
+                        닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notice -->
+        <div v-if="toastMessage" class="fixed top-20 right-6 z-[10000] bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 border border-slate-800 animate-bounce">
+            <i class="fa-solid fa-circle-info text-emerald-400"></i>
+            <span>{{ toastMessage }}</span>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                // NAVIGATION STATE
+                const currentTab = ref('map');
+
+                // DYNAMIC DATA MANAGEMENT
+                const gumiItems = ref([]);
+                const dataLoadStatus = ref('idle'); // 'idle' | 'loading' | 'success' | 'failed'
+
+                // Categories Mapping based on RFP Schema Spec
+                const categories = [
+                    { id: 'all', name: '전체', icon: 'fa-solid fa-grid-2' },
+                    { id: '12', name: '관광지', icon: 'fa-solid fa-tree' },
+                    { id: '14', name: '문화시설', icon: 'fa-solid fa-landmark' },
+                    { id: '15', name: '축제/공연', icon: 'fa-solid fa-calendar-star' },
+                    { id: '28', name: '레포츠', icon: 'fa-solid fa-person-running' },
+                    { id: '32', name: '숙박', icon: 'fa-solid fa-hotel' },
+                    { id: '38', name: '쇼핑', icon: 'fa-solid fa-bag-shopping' },
+                    { id: '39', name: '음식점', icon: 'fa-solid fa-utensils' }
+                ];
+
+                const selectedCategory = ref('all');
+                const searchQuery = ref('');
+                const selectedItem = ref(null);
+
+                // Leaflet Map instance & markers
+                let map = null;
+                let markerGroup = null; // Leaflet LayerGroup to manage markers easily
+
+                // SEARCH & FILTERS
+                const filteredItems = computed(() => {
+                    return gumiItems.value.filter(item => {
+                        const matchesCategory = selectedCategory.value === 'all' || item.contenttypeid === selectedCategory.value;
+                        const matchesQuery = item.title.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+                                             item.addr1.toLowerCase().includes(searchQuery.value.toLowerCase());
+                        return matchesCategory && matchesQuery;
+                    });
+                });
+
+                const getCategoryName = (typeId) => {
+                    const cat = categories.find(c => c.id === typeId);
+                    return cat ? cat.name : '기타';
+                };
+
+                // MAP MARKERS UPDATE LOGIC
+                const updateMapMarkers = () => {
+                    if (!map) return;
+                    
+                    // Clear existing markers
+                    if (markerGroup) {
+                        markerGroup.clearLayers();
+                    } else {
+                        markerGroup = L.layerGroup().addTo(map);
+                    }
+
+                    filteredItems.value.forEach(item => {
+                        if (!item.mapy || !item.mapx) return;
+                        
+                        const lat = parseFloat(item.mapy);
+                        const lng = parseFloat(item.mapx);
+                        
+                        if (isNaN(lat) || isNaN(lng)) return;
+
+                        const marker = L.marker([lat, lng])
+                            .bindPopup(`
+                                <div class="p-1 min-w-[150px]">
+                                    <h4 class="font-bold text-sm text-slate-900">${item.title}</h4>
+                                    <p class="text-xs text-slate-500 mt-1">${item.addr1}</p>
+                                    <div class="flex justify-between items-center mt-2 pt-1.5 border-t border-slate-100">
+                                        <span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">${getCategoryName(item.contenttypeid)}</span>
+                                        <span class="text-[10px] text-slate-400">ID: ${item.contentid}</span>
+                                    </div>
+                                </div>
+                            `);
+                        
+                        marker.on('click', () => {
+                            selectedItem.value = item;
+                        });
+
+                        markerGroup.addLayer(marker);
+                    });
+                };
+
+                // MAP INITIALIZATION
+                const initMap = () => {
+                    if (map) return;
+                    
+                    // Center around Gumi-si city hall coordinates
+                    map = L.map('map').setView([36.1200, 128.3300], 12);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap contributors'
+                    }).addTo(map);
+
+                    markerGroup = L.layerGroup().addTo(map);
+                    updateMapMarkers();
+                };
+
+                const selectPOI = (item) => {
+                    selectedItem.value = item;
+                    if (map && item.mapy && item.mapx) {
+                        const lat = parseFloat(item.mapy);
+                        const lng = parseFloat(item.mapx);
+                        map.setView([lat, lng], 14);
+                        
+                        // Find and open popup for the selected item
+                        markerGroup.eachLayer((layer) => {
+                            const latLng = layer.getLatLng();
+                            if (Math.abs(latLng.lat - lat) < 0.0001 && Math.abs(latLng.lng - lng) < 0.0001) {
+                                layer.openPopup();
+                            }
+                        });
+                    }
+                };
+
+                const selectPOIAndSwitch = (item) => {
+                    currentTab.value = 'map';
+                    nextTick(() => {
+                        initMap();
+                        selectPOI(item);
+                    });
+                };
+
+                const resetMapCenter = () => {
+                    if (map) {
+                        map.setView([36.1200, 128.3300], 12);
+                        map.closePopup();
+                        selectedItem.value = null;
+                    }
+                };
+
+                const toggleCategory = (catId) => {
+                    selectedCategory.value = catId;
+                    nextTick(() => {
+                        updateMapMarkers();
+                    });
+                };
+
+                // DYNAMIC FETCH FROM DATA FOLDER
+                const fetchGumiLocalData = async () => {
+                    dataLoadStatus.value = 'loading';
+                    
+                    // Anticipated RFP file patterns under data/ directory
+                    const jsonFiles = [
+                        '구미_경북권_관광지.json',
+                        '구미_경북권_문화시설.json',
+                        '구미_경북권_축제공연행사.json',
+                        '구미_경북권_레포츠.json',
+                        '구미_경북권_숙박.json',
+                        '구미_경북권_쇼핑.json',
+                        '구미_경북권_음식점.json'
+                    ];
+
+                    let allItems = [];
+
+                    // Try to load asynchronously using Promise.allSettled
+                    const fetchPromises = jsonFiles.map(filename => 
+                        fetch(`./data/${filename}`)
+                            .then(res => {
+                                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                return res.json();
+                            })
+                    );
+
+                    const results = await Promise.allSettled(fetchPromises);
+                    let successCount = 0;
+
+                    results.forEach((result) => {
+                        if (result.status === 'fulfilled' && result.value && result.value.items) {
+                            allItems = allItems.concat(result.value.items);
+                            successCount++;
+                        }
+                    });
+
+                    if (successCount > 0) {
+                        // Keep only Gumi items to strictly respect Gumi-center target scope
+                        gumiItems.value = allItems.filter(item => item.addr1 && item.addr1.includes('구미'));
+                        dataLoadStatus.value = 'success';
+                        showToast(`데이터 파일 ${successCount}개를 정상적으로 불러왔습니다.`);
+                        nextTick(() => {
+                            updateMapMarkers();
+                        });
+                    } else {
+                        dataLoadStatus.value = 'failed';
+                        // Loading static core fallback if files aren't physically deployed or CORS restricted
+                        loadBaselineData();
+                    }
+                };
+
+                // FALLBACK MOCK DATA INJECTOR (In case of file absence/CORS restriction)
+                const loadBaselineData = () => {
+                    const fallbackData = [
+                        {
+                            "addr1": "경상북도 구미시 금오산로 400-1 (남통동)",
+                            "contentid": "126535",
+                            "contenttypeid": "12",
+                            "title": "금오산도립공원 (Mt. Geumosan)",
+                            "tel": "054-480-4601",
+                            "mapx": "128.307525",
+                            "mapy": "36.103758",
+                            "firstimage": "https://images.unsplash.com/photo-1542224566-6e85f2e6772f?auto=format&fit=crop&w=600&q=80"
+                        },
+                        {
+                            "addr1": "경상북도 구미시 금오산로22길 24-1 (원평동)",
+                            "contentid": "2782877",
+                            "contenttypeid": "14",
+                            "title": "책봄 (동네 독립서점)",
+                            "tel": "010-4621-3907",
+                            "mapx": "128.330014",
+                            "mapy": "36.126222",
+                            "firstimage": "https://tong.visitkorea.or.kr/cms/resource/82/2794582_image2_1.jpg"
+                        },
+                        {
+                            "addr1": "경상북도 구미시 3공단1로 225-7 (임수동)",
+                            "contentid": "130635",
+                            "contenttypeid": "14",
+                            "title": "구미과학관 (Gumi Science Center)",
+                            "tel": "054-476-6508",
+                            "mapx": "128.388836",
+                            "mapy": "36.103986",
+                            "firstimage": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80"
+                        },
+                        {
+                            "addr1": "경상북도 구미시 금오산로 419 (남통동)",
+                            "contentid": "126538",
+                            "contenttypeid": "28",
+                            "title": "금오산 케이블카",
+                            "tel": "054-452-4488",
+                            "mapx": "128.302522",
+                            "mapy": "36.101524",
+                            "firstimage": "https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=600&q=80"
+                        },
+                        {
+                            "addr1": "경상북도 구미시 산동읍 인덕리 산5-1",
+                            "contentid": "2500041",
+                            "contenttypeid": "12",
+                            "title": "구미에코랜드 (산림문화휴양단지)",
+                            "tel": "054-480-2081",
+                            "mapx": "128.460111",
+                            "mapy": "36.166222",
+                            "firstimage": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=600&q=80"
+                        },
+                        {
+                            "addr1": "경상북도 구미시 금오산로 400-1",
+                            "contentid": "141203",
+                            "contenttypeid": "32",
+                            "title": "호텔 금오산 (Hotel Geumosan)",
+                            "tel": "054-450-4000",
+                            "mapx": "128.310500",
+                            "mapy": "36.102800",
+                            "firstimage": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80"
+                        },
+                        {
+                            "addr1": "경상북도 구미시 금오산로3길 12 (원평동)",
+                            "contentid": "999881",
+                            "contenttypeid": "39",
+                            "title": "구미 원평동 파스타 맛집",
+                            "tel": "054-455-1212",
+                            "mapx": "128.331522",
+                            "mapy": "36.124500",
+                            "firstimage": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80"
+                        },
+                        {
+                            "addr1": "경상북도 구미시 구미중앙로9길 11 (원평동)",
+                            "contentid": "129035",
+                            "contenttypeid": "38",
+                            "title": "구미 새마을중앙시장 (전통시장)",
+                            "tel": "054-452-2598",
+                            "mapx": "128.332305",
+                            "mapy": "36.128711",
+                            "firstimage": "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=600&q=80"
+                        }
+                    ];
+                    gumiItems.value = fallbackData;
+                    nextTick(() => {
+                        updateMapMarkers();
+                    });
+                };
+
+                // DRAG & DROP OR DIRECT FILES LOAD (CORS Bypass)
+                const handleManualJsonUpload = (e) => {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
+
+                    let loadedItems = [];
+                    let processedFiles = 0;
+
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const reader = new FileReader();
+                        
+                        reader.onload = (event) => {
+                            try {
+                                const parsed = JSON.parse(event.target.result);
+                                if (parsed && parsed.items) {
+                                    loadedItems = loadedItems.concat(parsed.items);
+                                }
+                            } catch (err) {
+                                console.error(`${file.name} 파싱 실패`, err);
+                            }
+                            processedFiles++;
+
+                            if (processedFiles === files.length) {
+                                // Strictly filter Gumi centric items
+                                const filteredGumi = loadedItems.filter(item => item.addr1 && item.addr1.includes('구미'));
+                                if (filteredGumi.length > 0) {
+                                    gumiItems.value = filteredGumi;
+                                    dataLoadStatus.value = 'success';
+                                    showToast(`수동 로드 완료! 구미 정보 총 ${filteredGumi.length}개를 적용했습니다.`);
+                                    nextTick(() => {
+                                        updateMapMarkers();
+                                        resetMapCenter();
+                                    });
+                                } else {
+                                    showToast('업로드한 파일에서 구미 관련 데이터를 찾을 수 없습니다.');
+                                }
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+
+                // LIKES & BOOKMARKS (Stored in localStorage)
+                const likedIds = ref(JSON.parse(localStorage.getItem('gumi_liked_ids') || '[]'));
+                const bookmarkedIds = ref(JSON.parse(localStorage.getItem('gumi_bookmarked_ids') || '[]'));
+                const dynamicLikesCount = ref(JSON.parse(localStorage.getItem('gumi_likes_count') || '{}'));
+
+                const isLiked = (id) => likedIds.value.includes(id);
+                const isBookmarked = (id) => bookmarkedIds.value.includes(id);
+                const getLikesCount = (id) => {
+                    if (dynamicLikesCount.value[id] === undefined) {
+                        dynamicLikesCount.value[id] = Math.floor(Math.abs(parseInt(id) % 27)) + 3;
+                    }
+                    return dynamicLikesCount.value[id];
+                };
+
+                const toggleLike = (id) => {
+                    if (isLiked(id)) {
+                        likedIds.value = likedIds.value.filter(i => i !== id);
+                        dynamicLikesCount.value[id] = Math.max(0, getLikesCount(id) - 1);
+                        showToast('좋아요를 취소했습니다.');
+                    } else {
+                        likedIds.value.push(id);
+                        dynamicLikesCount.value[id] = getLikesCount(id) + 1;
+                        showToast('좋아요를 반영했습니다!');
+                    }
+                    localStorage.setItem('gumi_liked_ids', JSON.stringify(likedIds.value));
+                    localStorage.setItem('gumi_likes_count', JSON.stringify(dynamicLikesCount.value));
+                };
+
+                const toggleBookmark = (id) => {
+                    if (isBookmarked(id)) {
+                        bookmarkedIds.value = bookmarkedIds.value.filter(i => i !== id);
+                        showToast('북마크 보관함에서 삭제되었습니다.');
+                    } else {
+                        bookmarkedIds.value.push(id);
+                        showToast('북마크 보관함에 저장되었습니다!');
+                    }
+                    localStorage.setItem('gumi_bookmarked_ids', JSON.stringify(bookmarkedIds.value));
+                };
+
+                const bookmarkedPlaces = computed(() => {
+                    return gumiItems.value.filter(item => isBookmarked(item.contentid));
+                });
+
+                const likedPlaces = computed(() => {
+                    return gumiItems.value.filter(item => isLiked(item.contentid));
+                });
+
+
+                // ANONYMOUS BOARD CRUD
+                const posts = ref(JSON.parse(localStorage.getItem('gumi_board_posts') || '[]'));
+                const boardSearchQuery = ref('');
+                const isWriteModalOpen = ref(false);
+                const isViewModalOpen = ref(false);
+                const activePost = ref(null);
+                const actionPassword = ref('');
+
+                const postForm = ref({
+                    title: '',
+                    author: '',
+                    password: '',
+                    category: '잡담',
+                    content: ''
+                });
+
+                const editingPost = ref(null);
+
+                // Initial basic sample posts if empty
+                if (posts.value.length === 0) {
+                    posts.value = [
+                        {
+                            id: 1,
+                            title: '금오산 케이블카 진짜 강추합니다!',
+                            author: '싸피9기',
+                            category: '후기',
+                            content: '주말에 동기들과 금오산에 다녀왔어요! 케이블카 타고 올라가서 웅장한 대혜폭포 구경도 하고 해운사 절 들려서 시원한 약수 마셨더니 스트레스 다 날아갑니다. 구미 오시면 꼭 타보세요!',
+                            password: '1234',
+                            views: 28,
+                            createdDate: new Date(Date.now() - 3600000 * 24).toISOString()
+                        },
+                        {
+                            id: 2,
+                            title: '구미 원평동 이색 북카페 책봄 다녀오신 분?',
+                            author: '구미로컬러',
+                            category: '질문',
+                            content: '요즘 금리단길이라고 예쁜 카페들 많던데 원평동 책봄 어때요? 책 읽기 좋은 고즈넉한 인디 감성이라고 들어서 가보고 싶네요.',
+                            password: '1234',
+                            views: 14,
+                            createdDate: new Date().toISOString()
+                        }
+                    ];
+                    localStorage.setItem('gumi_board_posts', JSON.stringify(posts.value));
+                }
+
+                const filteredPosts = computed(() => {
+                    return posts.value.filter(post => {
+                        return post.title.toLowerCase().includes(boardSearchQuery.value.toLowerCase()) || 
+                               post.content.toLowerCase().includes(boardSearchQuery.value.toLowerCase());
+                    }).sort((a,b) => b.id - a.id);
+                });
+
+                const formatDate = (isoStr) => {
+                    if (!isoStr) return '';
+                    const d = new Date(isoStr);
+                    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                };
+
+                const openWriteModal = () => {
+                    editingPost.value = null;
+                    postForm.value = {
+                        title: '',
+                        author: '',
+                        password: '',
+                        category: '잡담',
+                        content: ''
+                    };
+                    isWriteModalOpen.value = true;
+                };
+
+                const closeWriteModal = () => {
+                    isWriteModalOpen.value = false;
+                };
+
+                const submitPost = () => {
+                    if (!postForm.value.title || !postForm.value.author || !postForm.value.password || !postForm.value.content) {
+                        showToast('모든 필수 정보를 입력해 주세요.');
+                        return;
+                    }
+
+                    if (editingPost.value) {
+                        // edit update
+                        const index = posts.value.findIndex(p => p.id === editingPost.value.id);
+                        if (index !== -1) {
+                            posts.value[index] = {
+                                ...posts.value[index],
+                                title: postForm.value.title,
+                                category: postForm.value.category,
+                                content: postForm.value.content
+                            };
+                            showToast('게시글이 성공적으로 수정되었습니다.');
+                        }
+                    } else {
+                        // create new
+                        const newPost = {
+                            id: Date.now(),
+                            title: postForm.value.title,
+                            author: postForm.value.author,
+                            password: postForm.value.password,
+                            category: postForm.value.category,
+                            content: postForm.value.content,
+                            views: 0,
+                            createdDate: new Date().toISOString()
+                        };
+                        posts.value.push(newPost);
+                        showToast('새 게시글이 등록되었습니다.');
+                    }
+
+                    localStorage.setItem('gumi_board_posts', JSON.stringify(posts.value));
+                    isWriteModalOpen.value = false;
+                };
+
+                const viewPost = (post) => {
+                    post.views++;
+                    localStorage.setItem('gumi_board_posts', JSON.stringify(posts.value));
+                    activePost.value = post;
+                    actionPassword.value = '';
+                    isViewModalOpen.value = true;
+                };
+
+                const editPostWithPassword = () => {
+                    if (actionPassword.value === activePost.value.password) {
+                        editingPost.value = activePost.value;
+                        postForm.value = {
+                            title: activePost.value.title,
+                            author: activePost.value.author,
+                            password: activePost.value.password,
+                            category: activePost.value.category,
+                            content: activePost.value.content
+                        };
+                        isViewModalOpen.value = false;
+                        isWriteModalOpen.value = true;
+                    } else {
+                        showToast('비밀번호가 일치하지 않습니다.');
+                    }
+                };
+
+                const deletePostWithPassword = () => {
+                    if (actionPassword.value === activePost.value.password) {
+                        posts.value = posts.value.filter(p => p.id !== activePost.value.id);
+                        localStorage.setItem('gumi_board_posts', JSON.stringify(posts.value));
+                        isViewModalOpen.value = false;
+                        showToast('게시글이 삭제되었습니다.');
+                    } else {
+                        showToast('비밀번호가 일치하지 않습니다.');
+                    }
+                };
+
+
+                // FLOATING AI CHATBOT SYSTEM
+                const isChatOpen = ref(false);
+                const chatInput = ref('');
+                const isAiTyping = ref(false);
+                const showApiSettings = ref(false);
+                const chatScrollContainer = ref(null);
+                
+                // Get Key from LocalStorage
+                const geminiApiKey = ref(localStorage.getItem('gumi_gemini_api_key') || '');
+
+                const chatMessages = ref([
+                    {
+                        role: 'system',
+                        text: '반가워요! 구미 로컬 관광가이드봇입니다. 금오산, 에코랜드 등 구미시의 핵심 여행 코스와 맛집에 대해 자유롭게 질문해 보세요!'
+                    }
+                ]);
+
+                const chatPresets = [
+                    '금오산 주변 추천 코스',
+                    '구미의 조용한 문화시설',
+                    '인기 맛집 정보 알려줘'
+                ];
+
+                const toggleChat = () => {
+                    isChatOpen.value = !isChatOpen.value;
+                    if (isChatOpen.value) {
+                        scrollToBottom();
+                    }
+                };
+
+                const saveApiKey = () => {
+                    localStorage.setItem('gumi_gemini_api_key', geminiApiKey.value);
+                    showToast('Gemini API Key가 안전하게 저장되었습니다!');
+                    showApiSettings.value = false;
+                };
+
+                const sendPreset = (presetText) => {
+                    chatInput.value = presetText;
+                    sendChatMessage();
+                };
+
+                const sendChatMessage = async () => {
+                    if (!chatInput.value.trim()) return;
+
+                    const userText = chatInput.value;
+                    chatMessages.value.push({ role: 'user', text: userText });
+                    chatInput.value = '';
+                    isAiTyping.value = true;
+                    scrollToBottom();
+
+                    // Check if Custom Gemini API key exists
+                    if (geminiApiKey.value) {
+                        try {
+                            const responseText = await callGeminiAPI(userText);
+                            chatMessages.value.push({ role: 'assistant', text: responseText });
+                        } catch (err) {
+                            console.error(err);
+                            chatMessages.value.push({ 
+                                role: 'assistant', 
+                                text: '앗, API 연동 중 오류가 발생했습니다. 키가 올바른지 확인해 주세요. 오프라인 모드로 변환 답변합니다: \n\n' + getFallbackAnswer(userText) 
+                            });
+                        }
+                    } else {
+                        // Offline Simulate Chatbot Mode
+                        setTimeout(() => {
+                            const answer = getFallbackAnswer(userText);
+                            chatMessages.value.push({ role: 'assistant', text: answer });
+                            isAiTyping.value = false;
+                            scrollToBottom();
+                        }, 1000);
+                        return;
+                    }
+
+                    isAiTyping.value = false;
+                    scrollToBottom();
+                };
+
+                const callGeminiAPI = async (prompt) => {
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey.value}`;
+                    
+                    // Gumi Tourism data Context Inject
+                    const contextSystemPrompt = `
+                        너는 구미시 전문 AI 관광 안내 가이드 '구미봇(GumiBot)'이야. 다음 구미시 주요 여행/인프라 데이터 정보를 완벽히 파악하고 있어야 해:
+                        ${JSON.stringify(gumiItems.value.slice(0, 30))}
+                        
+                        [규칙]
+                        1. 친절하고 열정적인 가이드의 톤앤매너를 유지해줘.
+                        2. 사용자가 위 데이터에 존재하는 장소(예: 금오산도립공원, 책봄, 구미에코랜드 등)를 물어보면 주소와 특징을 결합해 완벽하게 안내해줘.
+                        3. 만약 구미의 다른 명소나 맛집을 질문하는 경우, 비록 데이터에 상세히 나와있지 않아도 너의 한국 지리를 기반으로 유익한 구미 중심 여행 정보를 성실히 답변해줘. (다른 지역은 일절 대답하지 마)
+                        4. 줄바꿈과 이모지를 섞어 읽기 쉽게 마크다운 형식으로 구성해줘.
+                    `;
+
+                    const payload = {
+                        contents: [
+                            { role: "user", parts: [{ text: `${contextSystemPrompt}\n\n사용자 질문: ${prompt}` }] }
+                        ]
+                    };
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error('API Error');
+
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || '답변을 생성하지 못했습니다.';
+                };
+
+                const getFallbackAnswer = (query) => {
+                    const q = query.toLowerCase();
+                    if (q.includes('금오산')) {
+                        return "🌲 **금오산도립공원 안내**\n구미의 자랑, 영남 팔경의 하나인 금오산(Mt. Geumosan)을 추천합니다!\n\n📍 **위치**: 경상북도 구미시 금오산로 400-1\n⭐️ **주요 포인트**: 금오산 케이블카, 시원한 대혜폭포, 산중 호수인 금오지 둘레길 산책코스까지 연인 또는 친구들과 걷기 좋은 구미의 핵심 명소입니다.";
+                    } else if (q.includes('책') || q.includes('문화') || q.includes('책봄')) {
+                        return "📚 **책봄 & 구미 문화시설 안내**\n조용하고 감성 가득한 문화 탐방을 선호하신다면 독특한 매력의 독립서점 **책봄**을 추천해요.\n\n📍 **위치**: 경상북도 구미시 금오산로22길 24-1 (원평동)\n⭐️ **주요 포인트**: 금리단길 골목에 위치하여 개성 넘치는 독립 출판물과 아기자기한 굿즈를 감상할 수 있습니다. 지적 힐링이 필요할 때 안성맞춤입니다.";
+                    } else if (q.includes('맛집') || q.includes('음식')) {
+                        return "🍝 **구미 맛집 가이드**\n트렌디한 젊은 세대와 맛집러들이 자주 찾는 금리단길 양식 명소를 추천합니다!\n\n📍 **위치**: 경상북도 구미시 금오산로3길 12\n⭐️ **주요 포인트**: 깔끔한 원평동 일대 이태리 파스타와 신선한 샐러드를 제공해 금오산 방문 전후 든든한 식사 장소로 제격입니다.";
+                    } else if (q.includes('에코랜드')) {
+                        return "🌳 **구미 에코랜드 안내**\n가족, 연인 그리고 SSAFY 동기들과 피크닉을 즐기기에 완벽한 힐링 테마파크입니다!\n\n📍 **위치**: 경상북도 구미시 산동읍 인덕리 산5-1\n⭐️ **주요 포인트**: 생태탐방 모노레일을 운영하고 있어 편안하게 숲속 절경을 내려다 볼 수 있습니다. 넓은 잔디 광장과 산림 체험장도 가득합니다.";
+                    }
+                    return "🙋 **구미 로컬 챗봇 답변**\n구미의 아름다운 금오산 케이블카, 금리단길 맛집, 구미에코랜드, 사계절 정취가 가득한 전통 새마을중앙시장 등을 둘러보시는 것을 강력하게 권장합니다!\n\n💡 더 자세한 장소 맞춤 답변을 원하신다면 우측 상단 톱니바퀴를 눌러 개인 **Gemini API Key**를 입력해 보세요!";
+                };
+
+                const scrollToBottom = () => {
+                    nextTick(() => {
+                        if (chatScrollContainer.value) {
+                            chatScrollContainer.value.scrollTop = chatScrollContainer.value.scrollHeight;
+                        }
+                    });
+                };
+
+
+                // TOAST SYSTEM
+                const toastMessage = ref('');
+                const showToast = (msg) => {
+                    toastMessage.value = msg;
+                    setTimeout(() => {
+                        toastMessage.value = '';
+                    }, 2500);
+                };
+
+                const handleImageError = (e) => {
+                    e.target.src = 'https://placehold.co/600x400/eceff1/90a4ae?text=No+Image';
+                };
+
+                const switchTab = (tabName) => {
+                    currentTab.value = tabName;
+                    if (tabName === 'map') {
+                        nextTick(() => {
+                            initMap();
+                            updateMapMarkers();
+                        });
+                    }
+                };
+
+                // MOUNT PIPELINE
+                onMounted(() => {
+                    initMap();
+                    fetchGumiLocalData();
+                });
+
+                return {
+                    currentTab,
+                    gumiItems,
+                    dataLoadStatus,
+                    categories,
+                    selectedCategory,
+                    searchQuery,
+                    selectedItem,
+                    filteredItems,
+                    getCategoryName,
+                    selectPOI,
+                    selectPOIAndSwitch,
+                    resetMapCenter,
+                    toggleCategory,
+                    handleManualJsonUpload,
+                    likedIds,
+                    bookmarkedIds,
+                    isLiked,
+                    isBookmarked,
+                    getLikesCount,
+                    toggleLike,
+                    toggleBookmark,
+                    bookmarkedPlaces,
+                    likedPlaces,
+
+                    // Community Board CRUD
+                    posts,
+                    boardSearchQuery,
+                    isWriteModalOpen,
+                    isViewModalOpen,
+                    activePost,
+                    actionPassword,
+                    postForm,
+                    editingPost,
+                    filteredPosts,
+                    formatDate,
+                    openWriteModal,
+                    closeWriteModal,
+                    submitPost,
+                    viewPost,
+                    editPostWithPassword,
+                    deletePostWithPassword,
+
+                    // Chatbot AI
+                    isChatOpen,
+                    chatInput,
+                    isAiTyping,
+                    showApiSettings,
+                    geminiApiKey,
+                    chatMessages,
+                    chatPresets,
+                    chatScrollContainer,
+                    toggleChat,
+                    saveApiKey,
+                    sendPreset,
+                    sendChatMessage,
+
+                    // Util
+                    toastMessage,
+                    showToast,
+                    handleImageError,
+                    switchTab
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
