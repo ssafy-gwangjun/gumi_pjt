@@ -896,7 +896,7 @@
                     });
                 };
 
-                // DYNAMIC FETCH FROM DATA FOLDER
+                // DYNAMIC FETCH FROM DATA FOLDER (CORS Restrictions bypassed via multi-file automatic loaders)
                 const fetchGumiLocalData = async () => {
                     dataLoadStatus.value = 'loading';
                     
@@ -908,7 +908,8 @@
                         '구미_경북권_레포츠.json',
                         '구미_경북권_숙박.json',
                         '구미_경북권_쇼핑.json',
-                        '구미_경북권_음식점.json'
+                        '구미_경북권_음식점.json',
+                        '구미_경북권_여행코스.json'
                     ];
 
                     let allItems = [];
@@ -933,8 +934,8 @@
                     });
 
                     if (successCount > 0) {
-                        // Keep only Gumi items to strictly respect Gumi-center target scope
-                        gumiItems.value = allItems.filter(item => item.addr1 && item.addr1.includes('구미'));
+                        // NO ADRESS FILTER: As data is pre-curated for Gumi & Gyeongbuk target, do not restrict.
+                        gumiItems.value = allItems;
                         dataLoadStatus.value = 'success';
                         showToast(`데이터 파일 ${successCount}개를 정상적으로 불러왔습니다.`);
                         nextTick(() => {
@@ -1037,7 +1038,7 @@
                     });
                 };
 
-                // DRAG & DROP OR DIRECT FILES LOAD (CORS Bypass)
+                // DRAG & DROP OR DIRECT FILES LOAD (CORS Bypass manual upload)
                 const handleManualJsonUpload = (e) => {
                     const files = e.target.files;
                     if (!files || files.length === 0) return;
@@ -1061,18 +1062,17 @@
                             processedFiles++;
 
                             if (processedFiles === files.length) {
-                                // Strictly filter Gumi centric items
-                                const filteredGumi = loadedItems.filter(item => item.addr1 && item.addr1.includes('구미'));
-                                if (filteredGumi.length > 0) {
-                                    gumiItems.value = filteredGumi;
+                                // NO ADRESS FILTER: Directly accept all uploaded target Gumi JSON datasets without string pattern constraints.
+                                if (loadedItems.length > 0) {
+                                    gumiItems.value = loadedItems;
                                     dataLoadStatus.value = 'success';
-                                    showToast(`수동 로드 완료! 구미 정보 총 ${filteredGumi.length}개를 적용했습니다.`);
+                                    showToast(`수동 로드 완료! 구미 및 인프라 정보 총 ${loadedItems.length}개를 적용했습니다.`);
                                     nextTick(() => {
                                         updateMapMarkers();
                                         resetMapCenter();
                                     });
                                 } else {
-                                    showToast('업로드한 파일에서 구미 관련 데이터를 찾을 수 없습니다.');
+                                    showToast('업로드한 파일에서 올바른 데이터를 찾을 수 없습니다.');
                                 }
                             }
                         };
@@ -1146,7 +1146,7 @@
 
                 const editingPost = ref(null);
 
-                // Initial basic sample posts if empty
+                // Initial basic sample posts if empty (Adding high quality Gumi specific real-world topics)
                 if (posts.value.length === 0) {
                     posts.value = [
                         {
@@ -1156,7 +1156,7 @@
                             category: '후기',
                             content: '주말에 동기들과 금오산에 다녀왔어요! 케이블카 타고 올라가서 웅장한 대혜폭포 구경도 하고 해운사 절 들려서 시원한 약수 마셨더니 스트레스 다 날아갑니다. 구미 오시면 꼭 타보세요!',
                             password: '1234',
-                            views: 28,
+                            views: 31,
                             createdDate: new Date(Date.now() - 3600000 * 24).toISOString()
                         },
                         {
@@ -1166,7 +1166,37 @@
                             category: '질문',
                             content: '요즘 금리단길이라고 예쁜 카페들 많던데 원평동 책봄 어때요? 책 읽기 좋은 고즈넉한 인디 감성이라고 들어서 가보고 싶네요.',
                             password: '1234',
-                            views: 14,
+                            views: 18,
+                            createdDate: new Date(Date.now() - 3600000 * 12).toISOString()
+                        },
+                        {
+                            id: 3,
+                            title: '신평동 쪽 이번 주말에 열리는 로컬 플리마켓 아시나요?',
+                            author: '동네산책러',
+                            category: '축제/공연',
+                            content: '신평동 일대 골목길에서 소상공인분들이 진행하는 주말 플리마켓이 열린대요! 소소한 수공예 소품이랑 수제 쿠키 같은 먹거리도 많다고 하니까 산책 겸 다녀오시면 너무 좋을 것 같습니다.',
+                            password: '1234',
+                            views: 25,
+                            createdDate: new Date(Date.now() - 3600000 * 6).toISOString()
+                        },
+                        {
+                            id: 4,
+                            title: 'SSAFY 구미캠퍼스 웰컴키트 구성 진짜 미쳤네요 대박!',
+                            author: '스타트교육생',
+                            category: '잡담',
+                            content: '오늘 싸피 구미캠퍼스 첫 입과해서 웰컴키트 수령했는데 에코백이랑 텀블러, 후드티 퀄리티가 생각했던 것보다 훨씬 더 고퀄이네요 ㄷㄷ 열심히 코딩 공부해서 올해 취뽀 가겠습니다!',
+                            password: '1234',
+                            views: 42,
+                            createdDate: new Date(Date.now() - 3600000 * 2).toISOString()
+                        },
+                        {
+                            id: 5,
+                            title: '금오산 잔디광장 피크닉 명당 추천해 드림',
+                            author: '꿀팁수집가',
+                            category: '맛집',
+                            content: '잔디광장 중심부보다는 살짝 저수지 산책로 올라가는 초입 나무 그늘 아래가 가장 명당입니다. 금리단길 맛집에서 시원한 샌드위치랑 아아 테이크아웃해 가서 피크닉 매트 펴두고 누워있으면 지상낙원이 따로 없어요.',
+                            password: '1234',
+                            views: 29,
                             createdDate: new Date().toISOString()
                         }
                     ];
